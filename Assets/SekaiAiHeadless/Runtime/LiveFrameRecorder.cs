@@ -236,16 +236,30 @@ namespace SekaiAiHeadless
 				sb.Append(',');
 			}
 
-			first = false;
-			// progress 改用显式 ToString：实测 batchmode 下复合格式 {3:F4} 会原样输出 "F4"，改显式格式化规避。
-			sb.AppendFormat(
-				CultureInfo.InvariantCulture,
-				"{{\"lane\":{0:F3},\"hit_time\":{1:F4},\"category\":\"{2}\",\"progress\":",
-				(note.LaneStartF + note.LaneEndF) * 0.5f,
-				hitTime,
-				note.Category.ToString());
-			sb.Append(progress.ToString("F4", CultureInfo.InvariantCulture));
-			sb.Append('}');
+		first = false;
+		// batchmode 下复合格式中的数值格式符（如 {3:F4}）会原样输出，故全部浮点先显式 ToString，
+		// 模板里只留无格式符占位；direction/category 取自枚举 ToString，不含引号可直插。
+		float laneStart = note.LaneStartF;
+		float laneEnd = note.LaneEndF;
+		float endTime = hitTime;
+		if (note is LongNote longNote && longNote.ChildNote != null)
+		{
+			endTime = longNote.ChildNote.MusicScoreInfo.time;
+		}
+
+		sb.AppendFormat(
+			CultureInfo.InvariantCulture,
+			"{{\"lane\":{0},\"hit_time\":{1},\"lane_start\":{2},\"lane_end\":{3},\"end_time\":{4},\"category\":\"{5}\",\"direction\":\"{6}\",\"speed_ratio\":{7},\"progress\":",
+			((laneStart + laneEnd) * 0.5f).ToString("F3", CultureInfo.InvariantCulture),
+			hitTime.ToString("F4", CultureInfo.InvariantCulture),
+			laneStart.ToString("F3", CultureInfo.InvariantCulture),
+			laneEnd.ToString("F3", CultureInfo.InvariantCulture),
+			endTime.ToString("F4", CultureInfo.InvariantCulture),
+			note.Category.ToString(),
+			note.Direction.ToString(),
+			note.speedRatio.ToString("F3", CultureInfo.InvariantCulture));
+		sb.Append(progress.ToString("F4", CultureInfo.InvariantCulture));
+		sb.Append('}');
 		}
 
 		private void OnLiveFinished()
@@ -291,17 +305,18 @@ namespace SekaiAiHeadless
 						"{{\"version\":\"1\",\"frames\":{0},\"lanes\":12}}",
 						frameId),
 					new UTF8Encoding(false));
-				File.WriteAllText(
-					Path.Combine(HeadlessCapture.OutDir, "meta.json"),
-					string.Format(
-						CultureInfo.InvariantCulture,
-						"{{\"music_id\":{0},\"difficulty\":\"{1}\",\"width\":{2},\"height\":{3},\"fps\":{4}}}",
-						HeadlessCapture.MusicId,
-						HeadlessCapture.Difficulty,
-						HeadlessCapture.FrameWidth,
-						HeadlessCapture.FrameHeight,
-						HeadlessCapture.TargetFps),
-					new UTF8Encoding(false));
+			File.WriteAllText(
+				Path.Combine(HeadlessCapture.OutDir, "meta.json"),
+				string.Format(
+					CultureInfo.InvariantCulture,
+					"{{\"music_id\":{0},\"difficulty\":\"{1}\",\"width\":{2},\"height\":{3},\"fps\":{4},\"note_speed\":{5}}}",
+					HeadlessCapture.MusicId,
+					HeadlessCapture.Difficulty,
+					HeadlessCapture.FrameWidth,
+					HeadlessCapture.FrameHeight,
+					HeadlessCapture.TargetFps,
+					HeadlessCapture.NoteSpeed.ToString("F1", CultureInfo.InvariantCulture)),
+				new UTF8Encoding(false));
 				Debug.LogFormat("HeadlessCapture: finished frames={0} out={1}", frameId, HeadlessCapture.OutDir);
 				if (frameId > 0)
 				{

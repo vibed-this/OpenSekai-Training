@@ -11,7 +11,8 @@ namespace SekaiAiHeadless.Editor
 		{
 			var settings = new Sekai.LiveSettingData
 			{
-				NoteSpeed = 6f,
+				// 与 Boot() 同源：命令行缺省即 DefaultNoteSpeed，显式非法直接抛错退出。
+				NoteSpeed = HeadlessCapture.ReadNoteSpeedArg(),
 				IsMirror = false,
 			};
 			Sekai.LiveSettingData.SaveToStorage(settings);

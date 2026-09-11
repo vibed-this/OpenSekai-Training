@@ -1,5 +1,6 @@
 // Headless 自动采数据：虚拟时钟 + 自举。由 batchmode 命令行驱动，无需 GUI。
 using System;
+using System.Globalization;
 using System.IO;
 using UnityEngine;
 
@@ -25,6 +26,11 @@ namespace SekaiAiHeadless
 		public static int TargetFps { get; private set; } = 60;
 
 		public static int JpgQuality { get; private set; } = 85;
+
+		/// <summary>采集流速（NoteSpeed）：progress→像素映射的唯一自由参数，必须随 meta 存档。</summary>
+		public const float DefaultNoteSpeed = 6f;
+
+		public static float NoteSpeed { get; private set; } = DefaultNoteSpeed;
 
 		private static bool booted;
 
@@ -127,14 +133,43 @@ namespace SekaiAiHeadless
 				TargetFps = f;
 			}
 
-			string jpg = GetArg("--sekai-jpg");
-			if (!string.IsNullOrEmpty(jpg) && int.TryParse(jpg, out int q))
-			{
-				JpgQuality = Math.Max(1, Math.Min(100, q));
-			}
-
-			return true;
+		string jpg = GetArg("--sekai-jpg");
+		if (!string.IsNullOrEmpty(jpg) && int.TryParse(jpg, out int q))
+		{
+			JpgQuality = Math.Max(1, Math.Min(100, q));
 		}
+
+		try
+		{
+			NoteSpeed = ReadNoteSpeedArg();
+		}
+		catch (ArgumentOutOfRangeException ex)
+		{
+			Debug.LogErrorFormat("HeadlessCapture: {0}", ex.Message);
+			return false;
+		}
+
+		return true;
+	}
+
+	/// <summary>解析 --sekai-speed：缺省为 DefaultNoteSpeed；显式非法抛异常（fast-fail，无兜底）。</summary>
+	public static float ReadNoteSpeedArg()
+	{
+		string raw = GetArg("--sekai-speed");
+		if (string.IsNullOrEmpty(raw))
+		{
+			return DefaultNoteSpeed;
+		}
+
+		if (!float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) || v <= 0f)
+		{
+			throw new ArgumentOutOfRangeException(
+				"sekai-speed",
+				string.Format(CultureInfo.InvariantCulture, "非法的 --sekai-speed：{0}（须为正数）。", raw));
+		}
+
+		return v;
+	}
 
 		/// <summary>虚拟音乐时钟：按固定步进推进，与真实帧率解耦。</summary>
 		public static long AdvanceVirtualMusicMs(long currentMs)
@@ -162,11 +197,11 @@ namespace SekaiAiHeadless
 			bootData.ReturnScreenType = null;
 			bootData.canSkipDisplayMusicInfo = true;
 			bootData.ReleaseTransitionBeforeMusicStart = true;
-			bootData.LiveSettingData = new Sekai.LiveSettingData
-			{
-				NoteSpeed = 6f,
-				IsMirror = false,
-			};
+		bootData.LiveSettingData = new Sekai.LiveSettingData
+		{
+			NoteSpeed = NoteSpeed,
+			IsMirror = false,
+		};
 			bootData.MusicData.MusicScore = score;
 			bootData.MusicData.IsTestPlay = false;
 			bootData.MusicData.IsUseCustomScore = true;
