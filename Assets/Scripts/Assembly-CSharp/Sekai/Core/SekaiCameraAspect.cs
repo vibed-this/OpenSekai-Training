@@ -16,10 +16,13 @@ namespace Sekai.Core
 		{
 			get
 			{
-				if (screenHeight != Screen.height || screenWidth != Screen.width)
+				// Headless 采集期按采集分辨率布局。
+				int displayWidth = SekaiAiHeadless.HeadlessDisplay.W();
+				int displayHeight = SekaiAiHeadless.HeadlessDisplay.H();
+				if (screenHeight != displayHeight || screenWidth != displayWidth)
 				{
-					screenHeight = Screen.height;
-					screenWidth = Screen.width;
+					screenHeight = displayHeight;
+					screenWidth = displayWidth;
 					currentAspect = screenHeight > 0 ? (float)screenWidth / screenHeight : TargetAspect;
 				}
 

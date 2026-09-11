@@ -52,6 +52,15 @@ namespace SekaiAiHeadless
 
 			Enabled = true;
 			virtualMusicMs = 0L;
+			// 布局覆盖必须在场景加载前激活：batchmode 下 Screen 回退 640x480（实测），
+			// 不覆盖则游戏按 4:3 布局，采集帧两侧黑边。
+			HeadlessDisplay.Activate(FrameWidth, FrameHeight);
+			Debug.LogFormat(
+				"HeadlessCapture: display override {0}x{1} (Screen={2}x{3})",
+				FrameWidth,
+				FrameHeight,
+				Screen.width,
+				Screen.height);
 			Boot();
 			return true;
 		}

@@ -108,8 +108,9 @@ namespace Sekai.Core.Live
 		{
 			Sekai.Live.MVQualityType qualityType = ConvertQualityType(BootData.MVQualityType);
 			ScreenConfig.ScreenSize renderTextureSize = LiveConfig.GetRenderTextureSize(qualityType, BootData.LivePlayMode);
-			int screenWidth = Screen.width;
-			int screenHeight = Screen.height;
+			// Headless 采集期按采集分辨率烘焙背景，否则 4:3 烘焙在 16:9 下拉伸。
+			int screenWidth = SekaiAiHeadless.HeadlessDisplay.W();
+			int screenHeight = SekaiAiHeadless.HeadlessDisplay.H();
 			if (screenWidth <= 0 || screenHeight <= 0 || renderTextureSize.width <= 0 || renderTextureSize.height <= 0)
 			{
 				return renderTextureSize;

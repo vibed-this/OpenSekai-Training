@@ -685,7 +685,8 @@ namespace Sekai.Live
 				return (float)targetTexture.width / targetTexture.height;
 			}
 
-			return Screen.height > 0 ? (float)Screen.width / Screen.height : BaseAspect;
+			// Headless 采集期按采集分辨率布局。
+			return SekaiAiHeadless.HeadlessDisplay.Aspect(BaseAspect);
 		}
 
 		private void DisableMovieMode()

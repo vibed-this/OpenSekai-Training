@@ -213,13 +213,15 @@ namespace Sekai
 		public static float CalcNoteShowRate(Vector2 position)
 		{
 			Camera frontCamera = CameraUtility.GetFrontCamera();
-			if (frontCamera == null || Screen.height <= 0)
+			// Headless 采集期按采集分辨率布局（RT 像素空间）。
+			int displayHeight = SekaiAiHeadless.HeadlessDisplay.H();
+			if (frontCamera == null || displayHeight <= 0)
 			{
 				return 1f;
 			}
 
 			float screenY = frontCamera.WorldToScreenPoint(new Vector3(position.x, position.y, 0f)).y;
-			return screenY / Screen.height;
+			return screenY / displayHeight;
 		}
 
 		public static Vector2 CalcNoteShowRatePosition(float settingsNoteShowRate)

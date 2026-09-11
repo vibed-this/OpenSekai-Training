@@ -80,7 +80,8 @@ namespace Sekai
 			}
 
 			float size = BaseOrthographicSize;
-			float screenAspect = (float)Screen.height / Screen.width;
+			// Headless 采集期按采集分辨率布局（batchmode 下 Screen 回退 4:3 会导致两侧黑边）。
+			float screenAspect = (float)SekaiAiHeadless.HeadlessDisplay.H() / SekaiAiHeadless.HeadlessDisplay.W();
 			float baseAspect = baseHeight / baseWidth;
 			if (baseType != BaseType.Height && (baseAspect <= screenAspect || baseType == BaseType.Width))
 			{

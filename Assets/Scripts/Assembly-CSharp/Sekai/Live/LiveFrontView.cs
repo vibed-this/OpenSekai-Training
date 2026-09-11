@@ -369,7 +369,8 @@ namespace Sekai.Live
 			}
 
 			float height = cameraSizeUpdater.OrthographicSize * 2f;
-			float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : ScreenConfig.Aspect;
+			// Headless 采集期按采集分辨率布局。
+			float aspect = SekaiAiHeadless.HeadlessDisplay.Aspect(ScreenConfig.Aspect);
 			backgroundRenderer.transform.localScale = new Vector3(height * aspect, height, 1f);
 		}
 
@@ -382,14 +383,16 @@ namespace Sekai.Live
 
 			float orthographicSize = cameraSizeUpdater.OrthographicSize;
 			float height = orthographicSize * 2f;
-			float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 16f / 9f;
+			// Headless 采集期按采集分辨率布局。
+			float aspect = SekaiAiHeadless.HeadlessDisplay.Aspect(16f / 9f);
 			deadMask.size = new Vector2(height * aspect, height);
 		}
 
 		private void RefreshScreenDependentLayout(bool force)
 		{
-			int currentWidth = Screen.width;
-			int currentHeight = Screen.height;
+			// Headless 采集期按采集分辨率布局：覆盖激活后尺寸变化会触发全量刷新。
+			int currentWidth = SekaiAiHeadless.HeadlessDisplay.W();
+			int currentHeight = SekaiAiHeadless.HeadlessDisplay.H();
 			if (currentWidth <= 0 || currentHeight <= 0)
 			{
 				return;
@@ -725,9 +728,10 @@ namespace Sekai.Live
 
 			// OpenSekai: the effect camera is disabled after setup, so keep its
 			// projection in sync when desktop/mobile resolution changes at runtime.
-			if (Screen.height > 0)
+			// Headless 采集期按采集分辨率布局。
+			if (SekaiAiHeadless.HeadlessDisplay.H() > 0)
 			{
-				effectCamera.aspect = (float)Screen.width / Screen.height;
+				effectCamera.aspect = SekaiAiHeadless.HeadlessDisplay.Aspect(16f / 9f);
 			}
 			if (effectCameraBaseFieldOfView > 0f)
 			{

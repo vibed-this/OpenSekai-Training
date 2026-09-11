@@ -14,7 +14,8 @@ namespace Sekai.Live
 
 		public void RefreshScreenSize()
 		{
-			float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 1.7778f;
+			// Headless 采集期按采集分辨率布局。
+			float aspect = SekaiAiHeadless.HeadlessDisplay.Aspect(1.7778f);
 			transform.localScale = Vector3.one * Mathf.Max(1.7778f / aspect, 1f);
 			if (damageEffectController != null)
 			{
@@ -37,7 +38,8 @@ namespace Sekai.Live
 
 		private ParticleSystemController CreateEffect(string effectName)
 		{
-			float aspect = Screen.height > 0 ? (float)Screen.width / Screen.height : 1.7778f;
+			// Headless 采集期按采集分辨率布局。
+			float aspect = SekaiAiHeadless.HeadlessDisplay.Aspect(1.7778f);
 			GameObject prefab = AssetBundleUtility.LoadAsset<GameObject>(LiveConfig.EffectBundleName, effectName);
 			if (prefab == null)
 			{
