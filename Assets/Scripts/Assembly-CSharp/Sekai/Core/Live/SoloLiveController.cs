@@ -14,6 +14,9 @@ namespace Sekai.Core.Live
 		private LiveViewBase[] liveViews;
 		private LiveLogic liveLogic;
 
+		// SekaiAiHeadless: 采集器读取逻辑与相机。
+		public LiveLogic LiveLogicForCapture => liveLogic;
+
 		protected override void OnAwake()
 		{
 			base.OnAwake();

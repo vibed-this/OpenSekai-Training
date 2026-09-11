@@ -254,6 +254,13 @@ namespace Sekai.Core.Live
 
 		protected virtual void UpdateMusicTime()
 		{
+			// SekaiAiHeadless: 虚拟时钟驱动，不依赖 CRI 音频设备。
+			if (SekaiAiHeadless.HeadlessCapture.Enabled)
+			{
+				currentMusicTimeMs = SekaiAiHeadless.HeadlessCapture.AdvanceVirtualMusicMs(currentMusicTimeMs);
+				return;
+			}
+
 			long audioTime = SoundManager.Instance.GetAudioSyncedUnityTimer();
 			if (audioTime <= 0L)
 			{

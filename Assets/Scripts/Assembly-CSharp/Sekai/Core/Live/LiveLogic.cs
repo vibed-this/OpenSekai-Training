@@ -105,6 +105,32 @@ namespace Sekai.Core.Live
 
 		public bool IsAllPerfectCombo => scoreLogic?.IsAllPerfectCombo ?? false;
 
+		// SekaiAiHeadless: 采集用根 note 枚举（含变速子集，去重）。
+		public void CollectCaptureNotes(List<NoteBase> output)
+		{
+			if (output == null)
+			{
+				return;
+			}
+
+			output.Clear();
+			foreach (NoteBase note in noteArray)
+			{
+				if (note != null)
+				{
+					output.Add(note);
+				}
+			}
+
+			foreach (NoteBase note in highSpeedNoteArray)
+			{
+				if (note != null && !output.Contains(note))
+				{
+					output.Add(note);
+				}
+			}
+		}
+
 		public LiveLogic(LiveBundleBuildData data)
 		{
 			NativeInput.Enable();
