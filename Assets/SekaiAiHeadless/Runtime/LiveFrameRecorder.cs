@@ -32,6 +32,36 @@ namespace SekaiAiHeadless
 
 		private bool finished;
 
+		// 分段计时：单 Stopwatch 取检查点，避免逐帧打日志刷屏，心跳按 600 帧窗口输出均值。
+		// 注：用全限定名，不引 System.Diagnostics，避免与 UnityEngine.Debug 二义。
+		private readonly System.Diagnostics.Stopwatch stageWatch = new System.Diagnostics.Stopwatch();
+
+		private double totalGtMs;
+
+		private double totalRenderMs;
+
+		private double totalReadbackMs;
+
+		private double totalEncodeMs;
+
+		private double totalWriteMs;
+
+		private double totalWallMs;
+
+		private double windowGtMs;
+
+		private double windowRenderMs;
+
+		private double windowReadbackMs;
+
+		private double windowEncodeMs;
+
+		private double windowWriteMs;
+
+		private double windowWallMs;
+
+		private int windowFrames;
+
 		/// <summary>绑定已就绪的 live 控制器。</summary>
 		public void Bind(SoloLiveController liveController)
 		{
@@ -78,6 +108,8 @@ namespace SekaiAiHeadless
 
 		private void DumpOneFrame()
 		{
+			stageWatch.Reset();
+			stageWatch.Start();
 			float now = logic.currentFrameInfo.time;
 			logic.CollectCaptureNotes(scratchRoots);
 
@@ -102,17 +134,22 @@ namespace SekaiAiHeadless
 					AppendNoteJson(notes, ref first, root, now);
 				}
 			}
+			double gtMs = stageWatch.Elapsed.TotalMilliseconds;
 
 			frontCamera.targetTexture = captureRt;
 			frontCamera.Render();
+			double renderMs = stageWatch.Elapsed.TotalMilliseconds - gtMs;
 			RenderTexture.active = captureRt;
 			readbackTex.ReadPixels(new Rect(0, 0, HeadlessCapture.FrameWidth, HeadlessCapture.FrameHeight), 0, 0);
 			readbackTex.Apply(false);
 			RenderTexture.active = null;
 			frontCamera.targetTexture = null;
+			double readbackMs = stageWatch.Elapsed.TotalMilliseconds - gtMs - renderMs;
 
 			string imageName = string.Format(CultureInfo.InvariantCulture, "frame_{0:000000}.jpg", frameId);
-			File.WriteAllBytes(Path.Combine(framesDir, imageName), readbackTex.EncodeToJPG(HeadlessCapture.JpgQuality));
+			byte[] jpg = readbackTex.EncodeToJPG(HeadlessCapture.JpgQuality);
+			double encodeMs = stageWatch.Elapsed.TotalMilliseconds - gtMs - renderMs - readbackMs;
+			File.WriteAllBytes(Path.Combine(framesDir, imageName), jpg);
 
 			gtWriter.WriteLine(string.Format(
 				CultureInfo.InvariantCulture,
@@ -123,13 +160,50 @@ namespace SekaiAiHeadless
 				HeadlessCapture.MusicId,
 				HeadlessCapture.Difficulty,
 				notes));
+			stageWatch.Stop();
+			double wallMs = stageWatch.Elapsed.TotalMilliseconds;
+			double writeMs = wallMs - gtMs - renderMs - readbackMs - encodeMs;
 			frameId++;
+
+			// 累计 lifetime + 窗口均值：心跳只报均值，避免逐帧日志拖慢主线程。
+			totalGtMs += gtMs;
+			totalRenderMs += renderMs;
+			totalReadbackMs += readbackMs;
+			totalEncodeMs += encodeMs;
+			totalWriteMs += writeMs;
+			totalWallMs += wallMs;
+			windowGtMs += gtMs;
+			windowRenderMs += renderMs;
+			windowReadbackMs += readbackMs;
+			windowEncodeMs += encodeMs;
+			windowWriteMs += writeMs;
+			windowWallMs += wallMs;
+			windowFrames++;
 
 			if (frameId % 600 == 0)
 			{
 				// 心跳：采集阶段平时无日志输出，定时心跳用于区分“正常采集”与“挂起”；Flush 避免中途被杀时 gt.jsonl 为空。
 				gtWriter.Flush();
-				Debug.LogFormat("HeadlessCapture: progress frames={0} time={1:F2}", frameId, now);
+				double divisor = windowFrames > 0 ? windowFrames : 1;
+				double windowFps = windowWallMs > 0.0 ? windowFrames * 1000.0 / windowWallMs : 0.0;
+				Debug.LogFormat(
+					"HeadlessCapture: progress frames={0} time={1:F2} wallFps={2:F1} avgMs(gt={3:F2} render={4:F2} readback={5:F2} encode={6:F2} write={7:F2} wall={8:F2})",
+					frameId,
+					now,
+					windowFps,
+					windowGtMs / divisor,
+					windowRenderMs / divisor,
+					windowReadbackMs / divisor,
+					windowEncodeMs / divisor,
+					windowWriteMs / divisor,
+					windowWallMs / divisor);
+				windowGtMs = 0.0;
+				windowRenderMs = 0.0;
+				windowReadbackMs = 0.0;
+				windowEncodeMs = 0.0;
+				windowWriteMs = 0.0;
+				windowWallMs = 0.0;
+				windowFrames = 0;
 			}
 		}
 
@@ -229,6 +303,20 @@ namespace SekaiAiHeadless
 						HeadlessCapture.TargetFps),
 					new UTF8Encoding(false));
 				Debug.LogFormat("HeadlessCapture: finished frames={0} out={1}", frameId, HeadlessCapture.OutDir);
+				if (frameId > 0)
+				{
+					double divisor = frameId;
+					Debug.LogFormat(
+						"HeadlessCapture: timing frames={0} avgMs(gt={1:F2} render={2:F2} readback={3:F2} encode={4:F2} write={5:F2} wall={6:F2}) wallFps={7:F1}",
+						frameId,
+						totalGtMs / divisor,
+						totalRenderMs / divisor,
+						totalReadbackMs / divisor,
+						totalEncodeMs / divisor,
+						totalWriteMs / divisor,
+						totalWallMs / divisor,
+						totalWallMs > 0.0 ? frameId * 1000.0 / totalWallMs : 0.0);
+				}
 			}
 			finally
 			{
