@@ -58,6 +58,14 @@ namespace Sekai
 				safeWidth -= SAFEAREA_WIDTH * 2f;
 			}
 
+			// Headless 采集期按采集分辨率布局：batchmode 下 Screen 回退 4:3，
+			// 不覆盖会把左右锚点内收约 12%（顶部 SCORE/LIFE 栏离边过远）。
+			if (SekaiAiHeadless.HeadlessDisplay.OverrideActive)
+			{
+				safeWidth = SekaiAiHeadless.HeadlessDisplay.W();
+				safeHeight = Mathf.Max(1f, SekaiAiHeadless.HeadlessDisplay.H());
+			}
+
 			Vector3 localPosition = transform.localPosition;
 			float y = 0f;
 			if (verticalAnchor == VerticalAnchor.Top)
