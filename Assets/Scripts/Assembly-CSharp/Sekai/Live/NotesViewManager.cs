@@ -24,9 +24,30 @@ namespace Sekai.Live
 
 		private bool isEnablePairNotesLine;
 
+		// SekaiAiHeadless 诊断计数：Spawn/Unspawn 调用与丢弃原因（心跳上报用）。
+		public int SpawnOkCount { get; private set; }
+
+		public int SpawnDropDupCount { get; private set; }
+
+		public int SpawnDropNullPoolCount { get; private set; }
+
+		public int SpawnDropNullViewCount { get; private set; }
+
+		public int UnspawnOkCount { get; private set; }
+
+		public int ActiveCount => spawnNoteDict?.Count ?? 0;
+
+		// SekaiAiHeadless 诊断：已 Spawn 成功过的 note Id 全集（根因定位用，只增不减）。
+		private readonly HashSet<int> spawnedNoteIds = new HashSet<int>();
+
 		public void Setup(Transform liveRoot)
 		{
 			spawnNoteDict = new Dictionary<INote, BaseNoteView>(DefaultNoteDictCapacity);
+			SpawnOkCount = 0;
+			SpawnDropDupCount = 0;
+			SpawnDropNullPoolCount = 0;
+			SpawnDropNullViewCount = 0;
+			UnspawnOkCount = 0;
 			GameObject root = new GameObject("NoteRoot");
 			noteRoot = root.transform;
 			noteRoot.SetParent(liveRoot, false);
@@ -139,8 +160,14 @@ namespace Sekai.Live
 
 		public void SpawnNote(INote note)
 		{
-			if (note == null || spawnNoteDict == null || spawnNoteDict.ContainsKey(note))
+			if (note == null || spawnNoteDict == null)
 			{
+				return;
+			}
+
+			if (spawnNoteDict.ContainsKey(note))
+			{
+				SpawnDropDupCount++;
 				return;
 			}
 
@@ -156,10 +183,22 @@ namespace Sekai.Live
 			}
 
 			NotePool pool = FindPool(note.Category, note.Type);
+			if (pool == null)
+			{
+				SpawnDropNullPoolCount++;
+				return;
+			}
+
 			BaseNoteView noteView = pool?.Spawn(note);
 			if (noteView != null)
 			{
 				spawnNoteDict[note] = noteView;
+				SpawnOkCount++;
+				spawnedNoteIds.Add(note.Id);
+			}
+			else
+			{
+				SpawnDropNullViewCount++;
 			}
 
 			if (isEnablePairNotesLine && note.PairNote != null)
@@ -190,7 +229,26 @@ namespace Sekai.Live
 			{
 				noteView?.Unspawn();
 				spawnNoteDict.Remove(note);
+				UnspawnOkCount++;
 			}
+		}
+
+		/// <summary>按 note 取已 spawn 的 view；未 spawn（不可见）返回 false。</summary>
+		public bool TryGetView(INote note, out BaseNoteView view)
+		{
+			view = null;
+			if (note == null || spawnNoteDict == null)
+			{
+				return false;
+			}
+
+			return spawnNoteDict.TryGetValue(note, out view) && view != null;
+		}
+
+		/// <summary>SekaiAiHeadless 诊断：该 Id 是否曾经 Spawn 成功过（跨 dict 替换仍可查）。</summary>
+		public bool WasSpawned(INote note)
+		{
+			return note != null && spawnedNoteIds.Contains(note.Id);
 		}
 
 		private NotePool CreateNotePool(int poolCount, string poolName, string noteResourceName, float noteShowRate)

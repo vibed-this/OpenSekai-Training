@@ -17,6 +17,72 @@ namespace Sekai.Core.Live
 		// SekaiAiHeadless: 采集器读取逻辑与相机。
 		public LiveLogic LiveLogicForCapture => liveLogic;
 
+		// SekaiAiHeadless: 采集器按 note 取视图（视图锚定框投影用）。
+		public bool TryGetNoteView(INote note, out global::Sekai.BaseNoteView view)
+		{
+			view = null;
+			if (note == null || liveViews == null)
+			{
+				return false;
+			}
+
+			foreach (LiveViewBase liveView in liveViews)
+			{
+				if (liveView is LiveFrontView frontView && frontView.TryGetNoteView(note, out view))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		// SekaiAiHeadless 诊断：取 Spawn/Unspawn 计数与当前 dict 规模。
+		public bool TryGetSpawnStats(out int spawnOk, out int unspawnOk, out int active, out int dropDup, out int dropNullPool, out int dropNullView)
+		{
+			spawnOk = 0;
+			unspawnOk = 0;
+			active = 0;
+			dropDup = 0;
+			dropNullPool = 0;
+			dropNullView = 0;
+			if (liveViews == null)
+			{
+				return false;
+			}
+
+			bool found = false;
+			foreach (LiveViewBase liveView in liveViews)
+			{
+				if (liveView is LiveFrontView frontView && frontView.TryGetSpawnStats(out spawnOk, out unspawnOk, out active, out dropDup, out dropNullPool, out dropNullView))
+				{
+					found = true;
+					break;
+				}
+			}
+
+			return found;
+		}
+
+		// SekaiAiHeadless 诊断：该 note 是否曾经 Spawn 成功过（跨 dict 替换仍可查）。
+		public bool WasNoteSpawned(INote note)
+		{
+			if (note == null || liveViews == null)
+			{
+				return false;
+			}
+
+			foreach (LiveViewBase liveView in liveViews)
+			{
+				if (liveView is LiveFrontView frontView && frontView.WasNoteSpawned(note))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		protected override void OnAwake()
 		{
 			base.OnAwake();

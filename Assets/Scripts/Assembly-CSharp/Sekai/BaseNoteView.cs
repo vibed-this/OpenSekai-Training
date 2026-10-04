@@ -76,6 +76,69 @@ namespace Sekai
 			gameObject.SetActive(false);
 		}
 
+		/// <summary>
+		/// 取 note 头的世界紧框（含父变换后的真实渲染位置）。
+		/// 只合并头 sprite（spriteRenderer + noteRenderers），长条拖尾由 NoteLineView 另画线，不在此框内。
+		/// scale 为零（Move 判不可见）或无有效 renderer 返回 false。
+		/// </summary>
+		public bool TryGetWorldBounds(out Bounds bounds)
+		{
+			bounds = default;
+			Vector3 scale = transform.localScale;
+			if (scale.x == 0f || scale.y == 0f || scale.z == 0f)
+			{
+				return false;
+			}
+
+			bool hasBounds = false;
+			if (spriteRenderer != null && spriteRenderer.gameObject.activeInHierarchy)
+			{
+				Bounds b = spriteRenderer.bounds;
+				if (IsValidBounds(b))
+				{
+					bounds = b;
+					hasBounds = true;
+				}
+			}
+
+			if (noteRenderers != null)
+			{
+				foreach (Renderer renderer in noteRenderers)
+				{
+					if (renderer == null || !renderer.gameObject.activeInHierarchy)
+					{
+						continue;
+					}
+
+					Bounds b = renderer.bounds;
+					if (!IsValidBounds(b))
+					{
+						continue;
+					}
+
+					if (!hasBounds)
+					{
+						bounds = b;
+						hasBounds = true;
+					}
+					else
+					{
+						bounds.Encapsulate(b);
+					}
+				}
+			}
+
+			return hasBounds;
+		}
+
+		private static bool IsValidBounds(Bounds b)
+		{
+			Vector3 size = b.size;
+			return size.x > 0f && size.y > 0f && size.z >= 0f
+				&& !float.IsNaN(size.x) && !float.IsNaN(size.y) && !float.IsNaN(size.z)
+				&& !float.IsInfinity(size.x) && !float.IsInfinity(size.y) && !float.IsInfinity(size.z);
+		}
+
 		public virtual void Change(Vector2 vector)
 		{
 		}

@@ -230,6 +230,47 @@ namespace Sekai.Live
 			}
 		}
 
+		/// <summary>按 note 取已 spawn 的 view 直通；未 spawn（不可见）返回 false。</summary>
+		public bool TryGetNoteView(INote note, out BaseNoteView view)
+		{
+			view = null;
+			if (note == null || notesViewManager == null)
+			{
+				return false;
+			}
+
+			return notesViewManager.TryGetView(note, out view);
+		}
+
+		/// <summary>SekaiAiHeadless 诊断：取 Spawn/Unspawn 计数与当前 dict 规模。</summary>
+		public bool TryGetSpawnStats(out int spawnOk, out int unspawnOk, out int active, out int dropDup, out int dropNullPool, out int dropNullView)
+		{
+			spawnOk = 0;
+			unspawnOk = 0;
+			active = 0;
+			dropDup = 0;
+			dropNullPool = 0;
+			dropNullView = 0;
+			if (notesViewManager == null)
+			{
+				return false;
+			}
+
+			spawnOk = notesViewManager.SpawnOkCount;
+			unspawnOk = notesViewManager.UnspawnOkCount;
+			active = notesViewManager.ActiveCount;
+			dropDup = notesViewManager.SpawnDropDupCount;
+			dropNullPool = notesViewManager.SpawnDropNullPoolCount;
+			dropNullView = notesViewManager.SpawnDropNullViewCount;
+			return true;
+		}
+
+		/// <summary>SekaiAiHeadless 诊断：该 note 是否曾经 Spawn 成功过（跨 dict 替换仍可查）。</summary>
+		public bool WasNoteSpawned(INote note)
+		{
+			return notesViewManager != null && notesViewManager.WasSpawned(note);
+		}
+
 		public override void JudgmentNote(NoteBase note)
 		{
 			if (note == null)
